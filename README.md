@@ -114,16 +114,28 @@ budget on hidden thinking and return no answer at all.
 |---|---|---|---|---|
 | `qwen3.8-27b-q3` (`unsloth/Qwen3.8-27B-GGUF:UD-Q3_K_XL`) | Q3_K_L (3-bit) | 14.1 GB | 100% GPU | ~29.3 tok/s |
 | `qwen3.8:27b` (official Ollama library tag) | Q4_K_M (4-bit) | ~18 GB | Partial CPU offload (16GB card) | ~14–15 tok/s |
-| `gpt-oss:20b` | MXFP4 | 13.8 GB | 100% GPU | (server default model; not benchmarked here) |
+| `gpt-oss:20b` (server default) | MXFP4 | 12.0 GB | 100% GPU | ~97–100 tok/s |
 
-The 3-bit `qwen3.8-27b-q3` quant was the only configuration that stayed
-100% GPU-resident on this 16 GB card at a useful context length, and
-benchmarked roughly 2x faster generation and ~7.5x faster prompt processing
-than the 4-bit quant's partial-CPU-offload path. All tool calls in this
-repo's test suite (`review_diff` catching a planted SQL-injection bug,
-`find_edge_cases` and `generate_tests` on a Minimum-Window-Substring
-implementation, `second_opinion` on an architecture question) were run
-against `qwen3.8-27b-q3` and verified correct.
+Both `qwen3.8-27b-q3` and the default `gpt-oss:20b` stay 100% GPU-resident
+on this 16 GB card at 32K context. `gpt-oss:20b` is substantially faster
+(~97–100 tok/s vs. ~29.3 tok/s) — expected, given it's the smaller model
+(20B vs. 27B) at a more aggressive quant (MXFP4). The 3-bit `qwen3.8-27b-q3`
+quant remains the only *Qwen* configuration that stays 100% GPU-resident at
+a useful context length on this card; the 4-bit `qwen3.8:27b` quant
+benchmarked roughly 2x slower generation and ~7.5x slower prompt processing
+than `qwen3.8-27b-q3` due to partial CPU offload.
+
+All tool calls in this repo's test suite — `review_diff` against a diff with
+a planted SQL-injection vulnerability and an off-by-one bug, `find_edge_cases`
+and `generate_tests` on a Minimum-Window-Substring implementation,
+`second_opinion` on an architecture question — were run against both
+`qwen3.8-27b-q3` and `gpt-oss:20b` and both correctly caught the planted
+bugs (Critical SQL injection, Critical/High off-by-one divisor) with a
+`CHANGES REQUESTED` verdict. Qualitatively, `gpt-oss:20b`'s free-form
+`second_opinion` answers were noticeably faster but occasionally less
+precise in their technical framing than `qwen3.8-27b-q3`'s — spot-check
+free-form (non-structured) answers before trusting them unread, regardless
+of which model you point the worker at.
 
 ## Known limitations
 
