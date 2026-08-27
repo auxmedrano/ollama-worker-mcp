@@ -15,6 +15,11 @@ relevant requirements, code, diffs, logs, and test output; the worker returns
 a structured, bounded analysis. The primary agent remains responsible for
 repository inspection, implementation, testing, and final decisions.
 
+**Origin:** this server started life as a Qwen-specific tool, but the
+project's own `_call_model`/`_resolve_think`/`_pad_max_tokens_for_thinking`
+parameters were themselves iteratively tuned with the help of `gemma4:12b`
+before this generic, multi-model version — and its benchmark suite — existed.
+
 ## Tools
 
 | Tool | Purpose |
@@ -110,13 +115,24 @@ budget on hidden thinking and return no answer at all.
 
 ## Models tested
 
-| Model | Quant | Size | GPU residency @ 32K ctx | Generation speed |
-|---|---|---|---|---|
-| `qwen3.8-27b-q3` (`unsloth/Qwen3.8-27B-GGUF:UD-Q3_K_XL`) | Q3_K_L (3-bit) | 14.1 GB | 100% GPU | ~29.3 tok/s |
-| `qwen3.8:27b` (official Ollama library tag) | Q4_K_M (4-bit) | ~18 GB | Partial CPU offload (16GB card) | ~14–15 tok/s |
-| `gpt-oss:20b` (server default) | MXFP4 | 12.0 GB | 100% GPU | ~97–100 tok/s |
-| `gemma4:latest` | Q4_K_M | 3.3 GB | 100% GPU | ~74 tok/s |
-| `gemma4:12b` (multimodal, used for `review_screenshot`) | Q4_K_M | 8.1 GB | 100% GPU | ~52 tok/s |
+| Model | Quant | Size | GPU @ 32K ctx | Gen speed | Multimodal | Ollama-reported capabilities | Reasoning control |
+|---|---|---|---|---|---|---|---|
+| `qwen3.8-27b-q3` (`unsloth/Qwen3.8-27B-GGUF:UD-Q3_K_XL`) | Q3_K_L (3-bit) | 14.1 GB | 100% GPU | ~29.3 tok/s | Yes | `completion, vision` | Boolean via the worker; `low`/`medium`/`high` via Ollama's native `--think` flag (verified directly — see note below) |
+| `qwen3.8:27b` (official Ollama library tag) | Q4_K_M (4-bit) | ~18 GB | Partial CPU offload | ~14–15 tok/s | Yes | `completion, vision` (same base model) | Same as above |
+| `gpt-oss:20b` (server default) | MXFP4 | 12.0 GB | 100% GPU | ~97–100 tok/s | No | `completion, tools, thinking` | Always reasons, no true "off" state — the worker's boolean maps to `low`/`high` effort |
+| `gemma4:latest` | Q4_K_M | 3.3 GB | 100% GPU | ~74 tok/s | No | `completion, tools, thinking` | Boolean |
+| `gemma4:12b` | Q4_K_M | 8.1 GB | 100% GPU | ~52 tok/s | Yes | `completion, tools, thinking, vision` | Boolean |
+
+**Note on the `qwen3.8-27b-q3`/`qwen3.8:27b` capability gap:** Ollama's
+reported capabilities for these two (both sourced from a community GGUF
+rather than an Ollama-library-native template) omit `thinking` and `tools`
+entirely, despite `think=low/medium/high` working correctly when tested
+directly against the Ollama CLI earlier in this project. Treat the
+`Ollama-reported capabilities` column as what Ollama itself claims to
+know about a model, not a ground-truth functional test — it can undersell
+a model sourced outside the official library. Native tool-calling was not
+functionally tested through this worker for any model listed here; the
+worker doesn't itself invoke tool-calling on the underlying model.
 
 All four stay 100% GPU-resident on this 16 GB card at 32K context — only
 the 4-bit `qwen3.8:27b` quant (not shown as a separate row: same model as
@@ -129,17 +145,20 @@ cost of its added vision encoder and larger param count relative to
 `gemma4:latest`. A `gemma4-131k:latest` tag (same 11.9B vision-capable
 model, extended context) is also installed but untested here.
 
-Two tools were run against the three text-only models —
-`qwen3.8-27b-q3`, `gpt-oss:20b`, and `gemma4:latest` — `review_diff` against
-a diff with a planted SQL-injection vulnerability and an off-by-one bug, and
-`second_opinion` on an architecture question. All three correctly caught
-both planted bugs (Critical SQL injection, Critical/High off-by-one
-divisor) with a `CHANGES REQUESTED` verdict; `gemma4:latest` additionally
-flagged the empty-list `ZeroDivisionError` edge case unprompted, matching
-`qwen3.8-27b-q3`. `find_edge_cases` and `generate_tests` were only
+Two tools were run against all four models — `review_diff` against a diff
+with a planted SQL-injection vulnerability and an off-by-one bug, and
+`second_opinion` on an architecture question. All four correctly caught
+both planted bugs with a `CHANGES REQUESTED` verdict, though not with
+identical framing: `qwen3.8-27b-q3`, `gpt-oss:20b`, and `gemma4:latest`
+called the wrong divisor Critical/High directly, while `gemma4:12b` framed
+the `len(values)==1` case as a High-severity division-by-zero bug and the
+general wrong-formula issue as a separate Medium finding — different
+organization, same underlying defect correctly identified either way.
+`gemma4:latest` additionally flagged the empty-list `ZeroDivisionError`
+edge case unprompted, matching `qwen3.8-27b-q3`; `gemma4:12b` did not call
+that case out separately. `find_edge_cases` and `generate_tests` were only
 exercised against `qwen3.8-27b-q3` (on a Minimum-Window-Substring
-implementation), not against the others. `gemma4:12b`'s only test was
-`review_screenshot`, covered separately below.
+implementation), not against the other three.
 
 Qualitatively, `gpt-oss:20b`'s free-form `second_opinion` answers were
 noticeably faster but occasionally less precise in their technical framing
