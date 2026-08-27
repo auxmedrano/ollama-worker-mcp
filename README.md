@@ -180,6 +180,15 @@ worker's output should not be trusted at face value — treat `review_screenshot
 results as a starting point, not a substitute for actually looking at the
 image yourself.
 
+For a much deeper dive into these same models' actual code/design output
+quality — not just whether a tool call succeeds — see
+[driftnote-bakeoff](https://github.com/auxmedrano/driftnote-bakeoff)
+([live site](https://auxmedrano.github.io/driftnote-bakeoff/)): four models
+given an identical realistic front-end brief (a self-contained landing
+page), scored against a 23-item checklist, plus a follow-up experiment on
+whether internal reasoning or an explicit plan-then-build workflow produces
+better results.
+
 ## Known limitations
 
 - `server_info.version` is now populated (`0.1.0`) but not wired to any
