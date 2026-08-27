@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+*.log
+server.py.bak*
+server.py.before-final
+server.py.*-backup
+server.py.pre-*
+server.py.rename-backup
