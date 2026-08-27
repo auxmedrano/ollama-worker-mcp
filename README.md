@@ -43,7 +43,7 @@ telemetry line appended to every response.
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install mcp
+.venv/bin/pip install -r requirements.txt
 ```
 
 ## Configuration
@@ -59,7 +59,7 @@ Everything is an environment variable with a sane default:
 | `OLLAMA_STATUS_TIMEOUT` | `10` (s) | Timeout for `status`'s lightweight Ollama queries. |
 | `OLLAMA_TEMPERATURE` | `0.1` | Sampling temperature — low by design for a reviewer role. |
 | `OLLAMA_NUM_CTX` | `32768` | Default context window; per-call override via `delegate`'s `num_ctx`. |
-| `OLLAMA_WORKER_LOG` | `~/tools/qwen-mcp/ollama-worker.log` | Full request/response log path. |
+| `OLLAMA_WORKER_LOG` | `~/tools/ollama-worker-mcp/ollama-worker.log` | Full request/response log path. |
 | `OLLAMA_LOG_FULL_CONTEXT` | `1` | Set to `0`/`false` to log only context length, not full content. |
 | `OLLAMA_WORKER_LOG_MAX_BYTES` | `10485760` (10 MB) | Log rotation threshold. |
 

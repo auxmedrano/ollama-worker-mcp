@@ -62,7 +62,7 @@ OLLAMA_NUM_CTX = int(
 LOG_FILE = Path(
     os.getenv(
         "OLLAMA_WORKER_LOG",
-        str(Path.home() / "tools/qwen-mcp/ollama-worker.log"),
+        str(Path.home() / "tools/ollama-worker-mcp/ollama-worker.log"),
     )
 )
 
